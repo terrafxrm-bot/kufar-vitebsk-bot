@@ -2,10 +2,13 @@ import requests
 import json
 import os
 
+
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
+
 KUFAR_URL = "https://api.kufar.by/search-api/v2/search/rendered-paginated"
+
 
 PARAMS = {
     "cat": "1010",
@@ -17,10 +20,12 @@ PARAMS = {
     "typ": "let"
 }
 
+
 SEEN_FILE = "seen_ads.json"
 
 
 def send_message(text):
+
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
     data = {
@@ -28,12 +33,18 @@ def send_message(text):
         "text": text
     }
 
-    response = requests.post(url, data=data)
+    response = requests.post(
+        url,
+        data=data,
+        timeout=20
+    )
 
     print("Telegram:", response.text)
 
 
+
 def load_seen():
+
     if not os.path.exists(SEEN_FILE):
         return []
 
@@ -41,12 +52,16 @@ def load_seen():
         return json.load(file)
 
 
+
 def save_seen(ads):
+
     with open(SEEN_FILE, "w") as file:
         json.dump(ads, file)
 
 
+
 def get_ads():
+
     response = requests.get(
         KUFAR_URL,
         params=PARAMS,
@@ -62,11 +77,44 @@ def get_ads():
     return data.get("ads", [])
 
 
+
+def is_owner(ad):
+
+    text = (
+        str(ad.get("subject", "")) +
+        str(ad.get("body_short", "")) +
+        str(ad.get("description", ""))
+    ).lower()
+
+
+    bad_words = [
+        "агентство",
+        "агент",
+        "риэлтор",
+        "риелтор",
+        "ан ",
+        "агентские услуги",
+        "посредник",
+        "компания"
+    ]
+
+
+    for word in bad_words:
+
+        if word in text:
+            return False
+
+
+    return True
+
+
+
 def check_new_ads():
 
     seen = load_seen()
 
     ads = get_ads()
+
 
     print("Найдено объявлений:", len(ads))
 
@@ -75,29 +123,48 @@ def check_new_ads():
 
         first_ids = []
 
+
         for ad in ads:
-            first_ids.append(str(ad["ad_id"]))
+
+            first_ids.append(
+                str(ad["ad_id"])
+            )
+
 
         save_seen(first_ids)
+
 
         send_message(
             "✅ Бот Kufar запущен.\n"
             f"Сохранено объявлений: {len(first_ids)}\n"
-            "Теперь буду присылать только новые."
+            "Теперь буду отправлять только новые квартиры."
         )
+
 
         return
 
 
+
     new_ads = []
+
 
     for ad in ads:
 
+
+        if not is_owner(ad):
+
+            continue
+
+
         ad_id = str(ad["ad_id"])
 
+
         if ad_id not in seen:
+
             new_ads.append(ad)
+
             seen.append(ad_id)
+
 
 
     save_seen(seen)
@@ -108,26 +175,43 @@ def check_new_ads():
 
     for ad in new_ads:
 
+
         message = (
+
             "🏠 Новая квартира!\n\n"
-            f"{ad.get('subject','Без названия')}\n"
+
+            f"📌 {ad.get('subject','Без названия')}\n"
+
             f"💰 Цена: {ad.get('price_byn','нет')} BYN\n"
-            "📍 Витебск\n\n"
+
+            "📍 Витебск\n"
+
+            "👤 Возможно собственник\n\n"
+
             f"{ad.get('body_short','')}\n\n"
+
             f"🔗 {ad.get('ad_link','')}"
+
         )
+
 
         send_message(message)
 
 
+
 if __name__ == "__main__":
 
+
     try:
+
         check_new_ads()
+
 
     except Exception as e:
 
+
         print("Ошибка:", e)
+
 
         send_message(
             f"❌ Ошибка Kufar бота:\n{e}"
