@@ -4,7 +4,10 @@ on:
   push:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/10 * * * *"
+
+permissions:
+  contents: write
 
 jobs:
   run-bot:
@@ -32,6 +35,9 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+
           git add seen_ads.json
+
           git commit -m "Update seen ads" || echo "No changes"
+
           git push
