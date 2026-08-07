@@ -1,15 +1,11 @@
 import requests
-import time
 import json
 import os
 
-
-TOKEN = "8701043369:AAG2JR4Tkwob2R4m1V8eoKyJPUGTCj7U35Y"
-CHAT_ID = "825979008"
-
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 KUFAR_URL = "https://api.kufar.by/search-api/v2/search/rendered-paginated"
-
 
 PARAMS = {
     "cat": "1010",
@@ -20,7 +16,6 @@ PARAMS = {
     "size": "30",
     "typ": "let"
 }
-
 
 SEEN_FILE = "seen_ads.json"
 
@@ -33,7 +28,9 @@ def send_message(text):
         "text": text
     }
 
-    requests.post(url, data=data)
+    response = requests.post(url, data=data)
+
+    print("Telegram:", response.text)
 
 
 def load_seen():
@@ -50,15 +47,19 @@ def save_seen(ads):
 
 
 def get_ads():
-
     response = requests.get(
         KUFAR_URL,
-        params=PARAMS
+        params=PARAMS,
+        timeout=20
     )
+
+    print("Kufar status:", response.status_code)
 
     data = response.json()
 
-    return data["ads"]
+    print("Ответ Kufar:", data.keys())
+
+    return data.get("ads", [])
 
 
 def check_new_ads():
@@ -67,7 +68,9 @@ def check_new_ads():
 
     ads = get_ads()
 
-    # Первый запуск
+    print("Найдено объявлений:", len(ads))
+
+
     if not seen:
 
         first_ids = []
@@ -78,9 +81,9 @@ def check_new_ads():
         save_seen(first_ids)
 
         send_message(
-            "✅ Первый запуск завершён.\n"
-            "Старые объявления сохранены.\n"
-            "Теперь буду отправлять только новые квартиры."
+            "✅ Бот Kufar запущен.\n"
+            f"Сохранено объявлений: {len(first_ids)}\n"
+            "Теперь буду присылать только новые."
         )
 
         return
@@ -88,38 +91,44 @@ def check_new_ads():
 
     new_ads = []
 
-
     for ad in ads:
 
         ad_id = str(ad["ad_id"])
-
 
         if ad_id not in seen:
             new_ads.append(ad)
             seen.append(ad_id)
 
 
-
     save_seen(seen)
 
+
+    print("Новых объявлений:", len(new_ads))
 
 
     for ad in new_ads:
 
         message = (
-            f"🏠 Новая квартира!\n\n"
-            f"{ad['subject']}\n"
-            f"💰 Цена: {ad.get('price_byn', 'нет')} BYN\n"
-            f"📍 Витебск\n\n"
-            f"{ad.get('body_short', '')}\n\n"
-            f"🔗 {ad['ad_link']}"
+            "🏠 Новая квартира!\n\n"
+            f"{ad.get('subject','Без названия')}\n"
+            f"💰 Цена: {ad.get('price_byn','нет')} BYN\n"
+            "📍 Витебск\n\n"
+            f"{ad.get('body_short','')}\n\n"
+            f"🔗 {ad.get('ad_link','')}"
         )
 
         send_message(message)
 
 
-try:
-    check_new_ads()
+if __name__ == "__main__":
 
-except Exception as e:
-    send_message(f"❌ Ошибка: {e}")
+    try:
+        check_new_ads()
+
+    except Exception as e:
+
+        print("Ошибка:", e)
+
+        send_message(
+            f"❌ Ошибка Kufar бота:\n{e}"
+        )
