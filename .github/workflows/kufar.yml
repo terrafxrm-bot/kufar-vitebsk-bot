@@ -41,3 +41,5 @@ jobs:
           git commit -m "Update seen ads" || echo "No changes"
 
           git push
+
+          
