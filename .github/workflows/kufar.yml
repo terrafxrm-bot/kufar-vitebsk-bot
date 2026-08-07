@@ -2,35 +2,28 @@ name: Kufar Bot
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
-
+    - cron: "*/10 * * * *"
   workflow_dispatch:
-
 
 jobs:
   run-bot:
-
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
-
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
 
-
       - name: Run bot
+        run: python main.py
         env:
-          TOKEN: ${{ secrets.TOKEN }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: |
-          python kufar_bot.py
