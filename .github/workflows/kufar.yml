@@ -17,9 +17,28 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - run: python kufar_bot.py
+      - name: Check secrets
+        run: |
+          if [ -z "$TELEGRAM_TOKEN" ]; then
+            echo "TOKEN EMPTY"
+          else
+            echo "TOKEN EXISTS"
+          fi
+
+          if [ -z "$CHAT_ID" ]; then
+            echo "CHAT EMPTY"
+          else
+            echo "CHAT EXISTS"
+          fi
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+
+      - name: Run Kufar bot
+        run: python kufar_bot.py
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
